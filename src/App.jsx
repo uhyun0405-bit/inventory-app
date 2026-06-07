@@ -259,7 +259,7 @@ const TransactionTab = ({ items, transactions, onAddTransaction, inventoryStats 
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">비고 (선택)</label>
-            <input type="text" value={formData.note} onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))} placeholder="ex) 추가 매입등" className="w-full rounded-lg border-slate-200 border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input type="text" value={formData.note} onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))} placeholder="ex) " className="w-full rounded-lg border-slate-200 border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <button type="submit" className="w-full text-white font-medium py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors flex justify-center items-center gap-2 mt-2">
             저장하기
@@ -477,7 +477,7 @@ const ItemManagementTab = ({ items, onAddItem, onUpdateItem, onDeleteItem }) => 
       <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 shadow-sm p-6 h-fit">
         <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2"><Plus size={20} className="text-blue-600" /> 새 품목 등록</h2>
         <form onSubmit={handleAdd} className="space-y-4">
-          <input type="text" value={newItem.division} onChange={e => setNewItem({...newItem, division: e.target.value})} placeholder="구분" className="w-full border p-2 rounded" />
+          <input type="text" value={newItem.division} onChange={e => setNewItem({...newItem, division: e.target.value})} placeholder="구분 (ex: 소모품)" className="w-full border p-2 rounded" />
           <input type="text" value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})} placeholder="업체명" className="w-full border p-2 rounded" />
           <input type="text" required value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} placeholder="품목명 *" className="w-full border p-2 rounded" />
           <input type="text" value={newItem.note} onChange={e => setNewItem({...newItem, note: e.target.value})} placeholder="비고" className="w-full border p-2 rounded" />
@@ -544,24 +544,49 @@ const ItemManagementTab = ({ items, onAddItem, onUpdateItem, onDeleteItem }) => 
   );
 };
 
+// --- 안전한 로컬 저장소 로딩 유틸리티 ---
+const safeParse = (key, fallback) => {
+  try {
+    const val = localStorage.getItem(key);
+    return val ? JSON.parse(val) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const getInitSyncCode = () => {
+  try {
+    return localStorage.getItem('inventory_sync_code') || 'DEMO123';
+  } catch {
+    return 'DEMO123';
+  }
+};
+
 // --- [메인 App 컴포넌트] ---
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [dashboardSort, setDashboardSort] = useState('name'); 
-  const [appName, setAppName] = useState('심플 재고관리');
+  
+  // 1. 연동 코드 캐싱 (새로고침 시 초기화 방지)
+  const initCode = getInitSyncCode();
+  const [syncCode, setSyncCode] = useState(initCode);
+  const [syncInput, setSyncInput] = useState(initCode);
+
+  // 2. 앱 상태 초기화 (캐시된 데이터로 즉시 화면에 띄움)
+  const [appName, setAppName] = useState(() => {
+    try { return localStorage.getItem(`inventory_app_name_${initCode}`) || '심플 재고관리'; }
+    catch { return '심플 재고관리'; }
+  });
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempAppName, setTempAppName] = useState('');
-  
-  // 클라우드 연동을 위한 코드
-  const [syncCode, setSyncCode] = useState('DEMO123');
-  const [syncInput, setSyncInput] = useState('DEMO123');
 
-  const [items, setItems] = useState([]);
-  const [transactions, setTransactions] = useState([]);
+  const [items, setItems] = useState(() => safeParse(`inventory_items_${initCode}`, []));
+  const [transactions, setTransactions] = useState(() => safeParse(`txs_${initCode}`, []));
+  
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // 1. Firebase 인증 처리 (익명 로그인)
+  // Firebase 인증 처리
   useEffect(() => {
     if (!isFirebaseConfigured) {
       setAuthLoading(false);
@@ -588,19 +613,22 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. 다른 기기와 데이터 공유를 위한 공용 경로 실시간 구독 (syncCode 적용)
+  // 3. 실시간 클라우드 구독 & 로컬 데이터 백업 동시 진행
   useEffect(() => {
     if (!isFirebaseConfigured || !user) return;
 
-    // RULE 1: 반드시 artifacts/{appId}/public/data/... 규칙 사용
     const itemsRef = collection(db, 'artifacts', appId, 'public', 'data', `items_${syncCode}`);
     const unsubItems = onSnapshot(itemsRef, (snapshot) => {
-      setItems(snapshot.docs.map(doc => doc.data()));
+      const data = snapshot.docs.map(doc => doc.data());
+      setItems(data);
+      try { localStorage.setItem(`inventory_items_${syncCode}`, JSON.stringify(data)); } catch(e){}
     }, (error) => console.error("Items Error:", error));
 
     const txRef = collection(db, 'artifacts', appId, 'public', 'data', `txs_${syncCode}`);
     const unsubTx = onSnapshot(txRef, (snapshot) => {
-      setTransactions(snapshot.docs.map(doc => doc.data()));
+      const data = snapshot.docs.map(doc => doc.data());
+      setTransactions(data);
+      try { localStorage.setItem(`txs_${syncCode}`, JSON.stringify(data)); } catch(e){}
     }, (error) => console.error("Tx Error:", error));
 
     const settingsRef = collection(db, 'artifacts', appId, 'public', 'data', `settings_${syncCode}`);
@@ -608,6 +636,7 @@ export default function App() {
       const appNameDoc = snapshot.docs.find(d => d.id === 'general');
       if (appNameDoc && appNameDoc.data().appName) {
         setAppName(appNameDoc.data().appName);
+        try { localStorage.setItem(`inventory_app_name_${syncCode}`, appNameDoc.data().appName); } catch(e){}
       } else {
         setAppName('심플 재고관리');
       }
@@ -618,49 +647,68 @@ export default function App() {
       unsubTx();
       unsubSettings();
     };
-  }, [user, syncCode]); // 연동 코드(syncCode)가 바뀔 때마다 데이터베이스 새로 불러옴
+  }, [user, syncCode]);
 
-  // 3. 데이터 추가/수정/삭제 시 공용 클라우드에 반영
+  // 4. 데이터 추가/수정/삭제 시 로컬과 클라우드 모두 저장
   const handleNameSave = async () => {
     if (tempAppName.trim() !== '') {
       const newName = tempAppName.trim();
       setAppName(newName); 
+      try { localStorage.setItem(`inventory_app_name_${syncCode}`, newName); } catch(e){}
+      
       if (isFirebaseConfigured && user) {
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `settings_${syncCode}`, 'general'), { appName: newName }, { merge: true });
+        try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `settings_${syncCode}`, 'general'), { appName: newName }, { merge: true }); }
+        catch(e) { console.error(e); }
       }
     }
     setIsEditingName(false);
   };
 
   const handleAddItem = async (newItem) => {
+    setItems(prev => {
+      const next = [...prev, newItem];
+      try { localStorage.setItem(`inventory_items_${syncCode}`, JSON.stringify(next)); } catch(e){}
+      return next;
+    });
     if (isFirebaseConfigured && user) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `items_${syncCode}`, newItem.id), newItem);
-    } else {
-      setItems(prev => [...prev, newItem]);
+      try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `items_${syncCode}`, newItem.id), newItem); }
+      catch(e) { console.error(e); }
     }
   };
 
   const handleUpdateItem = async (updatedItem) => {
+    setItems(prev => {
+      const next = prev.map(i => i.id === updatedItem.id ? updatedItem : i);
+      try { localStorage.setItem(`inventory_items_${syncCode}`, JSON.stringify(next)); } catch(e){}
+      return next;
+    });
     if (isFirebaseConfigured && user) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `items_${syncCode}`, updatedItem.id), updatedItem);
-    } else {
-      setItems(prev => prev.map(i => i.id === updatedItem.id ? updatedItem : i));
+      try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `items_${syncCode}`, updatedItem.id), updatedItem); }
+      catch(e) { console.error(e); }
     }
   };
 
   const handleDeleteItem = async (id) => {
+    setItems(prev => {
+      const next = prev.filter(i => i.id !== id);
+      try { localStorage.setItem(`inventory_items_${syncCode}`, JSON.stringify(next)); } catch(e){}
+      return next;
+    });
     if (isFirebaseConfigured && user) {
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `items_${syncCode}`, id));
-    } else {
-      setItems(prev => prev.filter(i => i.id !== id));
+      try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `items_${syncCode}`, id)); }
+      catch(e) { console.error(e); }
     }
   };
 
   const handleAddTransaction = async (newTx) => {
+    setTransactions(prev => {
+      const next = [...prev, newTx];
+      try { localStorage.setItem(`txs_${syncCode}`, JSON.stringify(next)); } catch(e){}
+      return next;
+    });
     if (isFirebaseConfigured && user) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `txs_${syncCode}`, newTx.id), newTx);
-    } else {
-      setTransactions(prev => [...prev, newTx]);
+      try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `txs_${syncCode}`, newTx.id), newTx); }
+      catch(e) { console.error(e); }
     }
   };
 
@@ -725,7 +773,7 @@ export default function App() {
               )}
             </div>
 
-            {/* 연동 코드 입력부: 다른 기기에서도 이 코드를 똑같이 맞추면 데이터가 동기화됩니다 */}
+            {/* 연동 코드 입력부 */}
             <div className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
               <span className="text-xs font-bold text-blue-700 whitespace-nowrap">🔄 연동 코드:</span>
               <input
@@ -736,8 +784,17 @@ export default function App() {
                 placeholder="코드명"
               />
               <button
-                onClick={() => { if(syncInput.trim()) setSyncCode(syncInput.trim()); }}
-                className="text-xs bg-blue-600 text-white px-2.5 py-1 rounded hover:bg-blue-700"
+                onClick={() => { 
+                  const newCode = syncInput.trim();
+                  if(newCode && newCode !== syncCode) {
+                    setSyncCode(newCode);
+                    try { localStorage.setItem('inventory_sync_code', newCode); } catch(e){}
+                    setItems(safeParse(`inventory_items_${newCode}`, []));
+                    setTransactions(safeParse(`txs_${newCode}`, []));
+                    try { setAppName(localStorage.getItem(`inventory_app_name_${newCode}`) || '심플 재고관리'); } catch(e){}
+                  }
+                }}
+                className="text-xs bg-blue-600 text-white px-2.5 py-1 rounded hover:bg-blue-700 font-medium"
               >
                 적용
               </button>
