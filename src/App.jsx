@@ -365,9 +365,10 @@ const TransactionTab = ({ items, transactions, onAddTransaction, inventoryStats 
 };
 
 // --- [탭 3] 일별 내역 (달력/그래프) 컴포넌트 ---
-const CalendarTab = ({ items, transactions }) => {
+const CalendarTab = ({ items, transactions, onDeleteTransaction }) => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [chartPeriod, setChartPeriod] = useState('day'); 
+  const [deletingTxId, setDeletingTxId] = useState(null);
 
   const dailyTransactions = useMemo(() => {
     return transactions.filter(tx => tx.date === selectedDate).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
@@ -482,31 +483,50 @@ const CalendarTab = ({ items, transactions }) => {
           <table className="w-full text-left text-xs whitespace-nowrap">
             <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
               <tr>
-                <th className="px-2 sm:px-4 py-2.5 font-medium">시간</th>
+                <th className="px-2 sm:px-4 py-2.5 font-medium text-center w-12">번호</th>
                 <th className="px-2 sm:px-4 py-2.5 font-medium">유형</th>
                 <th className="px-2 sm:px-4 py-2.5 font-medium">품목명</th>
                 <th className="px-2 sm:px-4 py-2.5 font-medium text-right">수량</th>
                 <th className="px-2 sm:px-4 py-2.5 font-medium max-w-[100px]">비고</th>
+                <th className="px-2 sm:px-4 py-2.5 font-medium text-center">관리</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {dailyTransactions.length === 0 ? (
-                <tr><td colSpan="5" className="px-4 py-6 text-center text-slate-500">기록된 내역이 없습니다.</td></tr>
+                <tr><td colSpan="6" className="px-4 py-6 text-center text-slate-500">기록된 내역이 없습니다.</td></tr>
               ) : (
-                dailyTransactions.map(tx => {
+                dailyTransactions.map((tx, index) => {
                   const item = items.find(i => i.id === tx.itemId);
-                  const timeStr = tx.createdAt ? new Date(tx.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '-';
+                  // 배열이 최신순(내림차순) 정렬이므로, 역순으로 번호를 부여하여 오래된 내역부터 1번으로 시작하도록 함
+                  const seqNum = dailyTransactions.length - index; 
                   return (
                     <tr key={tx.id} className="hover:bg-slate-50/50">
-                      <td className="px-2 sm:px-4 py-2 text-slate-500">{timeStr}</td>
-                      <td className="px-2 sm:px-4 py-2">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${tx.type === 'IN' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
-                          {tx.type === 'IN' ? '입고' : '출고'}
-                        </span>
-                      </td>
-                      <td className="px-2 sm:px-4 py-2 font-medium truncate max-w-[120px] sm:max-w-[200px]" title={item ? item.name : '삭제된품목'}>{item ? item.name : '삭제된품목'}</td>
-                      <td className={`px-2 sm:px-4 py-2 text-right font-semibold ${tx.type === 'IN' ? 'text-blue-600' : 'text-red-600'}`}>{tx.type === 'IN' ? '+' : '-'}{tx.quantity}</td>
-                      <td className="px-2 sm:px-4 py-2 text-slate-500 truncate max-w-[80px] sm:max-w-[120px]" title={tx.note}>{tx.note || '-'}</td>
+                      {deletingTxId === tx.id ? (
+                        <>
+                          <td colSpan="4" className="p-2 text-center text-red-600 font-bold text-xs">이 내역을 삭제할까요?</td>
+                          <td colSpan="2" className="p-2 text-center whitespace-nowrap">
+                            <button onClick={() => { onDeleteTransaction(tx.id); setDeletingTxId(null); }} className="px-2 py-1 bg-red-600 text-white text-[10px] rounded mr-1">네</button>
+                            <button onClick={() => setDeletingTxId(null)} className="px-2 py-1 bg-slate-200 text-[10px] rounded">아니오</button>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-2 sm:px-4 py-2 text-slate-500 text-center">{seqNum}</td>
+                          <td className="px-2 sm:px-4 py-2">
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${tx.type === 'IN' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
+                              {tx.type === 'IN' ? '입고' : '출고'}
+                            </span>
+                          </td>
+                          <td className="px-2 sm:px-4 py-2 font-medium truncate max-w-[120px] sm:max-w-[200px]" title={item ? item.name : '삭제된품목'}>{item ? item.name : '삭제된품목'}</td>
+                          <td className={`px-2 sm:px-4 py-2 text-right font-semibold ${tx.type === 'IN' ? 'text-blue-600' : 'text-red-600'}`}>{tx.type === 'IN' ? '+' : '-'}{tx.quantity}</td>
+                          <td className="px-2 sm:px-4 py-2 text-slate-500 truncate max-w-[80px] sm:max-w-[120px]" title={tx.note}>{tx.note || '-'}</td>
+                          <td className="px-2 sm:px-4 py-2 text-center whitespace-nowrap">
+                            <button onClick={() => setDeletingTxId(tx.id)} className="p-1.5 text-slate-400 hover:text-red-600" title="내역 삭제">
+                              <Trash2 size={14}/>
+                            </button>
+                          </td>
+                        </>
+                      )}
                     </tr>
                   );
                 })
@@ -768,6 +788,18 @@ export default function App() {
     }
   };
 
+  const handleDeleteTransaction = async (id) => {
+    setTransactions(prev => {
+      const next = prev.filter(tx => tx.id !== id);
+      try { localStorage.setItem('inventory_txs', JSON.stringify(next)); } catch(e){}
+      return next;
+    });
+    if (isFirebaseConfigured && user) {
+      try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'txs', id)); }
+      catch(e) { console.error(e); }
+    }
+  };
+
   // 재고 통계 계산
   const inventoryStats = useMemo(() => {
     const stats = items.map(item => {
@@ -828,7 +860,6 @@ export default function App() {
                 </h1>
               )}
             </div>
-            {/* 연동 코드 관련 UI 삭제됨 */}
           </div>
 
           <nav className="flex space-x-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 [&::-webkit-scrollbar]:hidden">
@@ -843,7 +874,7 @@ export default function App() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'dashboard' && <DashboardTab items={items} transactions={transactions} inventoryStats={inventoryStats} dashboardSort={dashboardSort} setDashboardSort={setDashboardSort} />}
         {activeTab === 'transactions' && <TransactionTab items={items} transactions={transactions} onAddTransaction={handleAddTransaction} inventoryStats={inventoryStats} />}
-        {activeTab === 'calendar' && <CalendarTab items={items} transactions={transactions} />}
+        {activeTab === 'calendar' && <CalendarTab items={items} transactions={transactions} onDeleteTransaction={handleDeleteTransaction} />}
         {activeTab === 'items' && <ItemManagementTab items={items} onAddItem={handleAddItem} onUpdateItem={handleUpdateItem} onDeleteItem={handleDeleteItem} />}
       </main>
     </div>
