@@ -59,7 +59,7 @@ const DashboardTab = ({ items, transactions, inventoryStats, dashboardSort, setD
   <div className="space-y-6">
     <div className="grid grid-cols-1 gap-4">
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
-        <div className="p-3 bg-blue-100 text-blue-600 rounded-lg">
+        <div className="p-3 bg-blue-100 text-blue-600 rounded-lg shrink-0">
           <Package size={24} />
         </div>
         <div>
@@ -70,9 +70,9 @@ const DashboardTab = ({ items, transactions, inventoryStats, dashboardSort, setD
     </div>
 
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center flex-wrap gap-3">
+      <div className="px-4 sm:px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h2 className="text-lg font-semibold text-slate-800">현재 재고 현황</h2>
-        <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
+        <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 [&::-webkit-scrollbar]:hidden">
           <button
             onClick={() => {
               const rows = [
@@ -81,7 +81,7 @@ const DashboardTab = ({ items, transactions, inventoryStats, dashboardSort, setD
               ];
               exportToExcel('현재_재고_현황', rows);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 hover:bg-green-200 rounded-md transition-colors whitespace-nowrap"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 hover:bg-green-200 rounded-md transition-colors whitespace-nowrap shrink-0"
           >
             <Download size={16} />
             <span className="hidden sm:inline">엑셀 다운로드</span>
@@ -89,19 +89,19 @@ const DashboardTab = ({ items, transactions, inventoryStats, dashboardSort, setD
           <div className="flex bg-slate-200/50 p-1 rounded-lg shrink-0">
             <button
               onClick={() => setDashboardSort('name')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${dashboardSort === 'name' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all ${dashboardSort === 'name' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
             >
               가나다순
             </button>
             <button
               onClick={() => setDashboardSort('category')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${dashboardSort === 'category' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all ${dashboardSort === 'category' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
             >
               업체명순
             </button>
             <button
               onClick={() => setDashboardSort('division')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${dashboardSort === 'division' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all ${dashboardSort === 'division' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
             >
               구분순
             </button>
@@ -109,14 +109,15 @@ const DashboardTab = ({ items, transactions, inventoryStats, dashboardSort, setD
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm min-w-[600px]">
+        {/* 폭 강제 고정 제거, 자동 축소 및 여백 조정 */}
+        <table className="w-full text-left text-sm whitespace-nowrap">
           <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
             <tr>
-              <th className="px-6 py-3 font-medium">구분</th>
-              <th className="px-6 py-3 font-medium">업체명</th>
-              <th className="px-6 py-3 font-medium">품목명</th>
-              <th className="px-6 py-3 font-medium">비고</th>
-              <th className="px-6 py-3 font-medium text-right">현재 재고</th>
+              <th className="px-3 sm:px-6 py-3 font-medium">구분</th>
+              <th className="px-3 sm:px-6 py-3 font-medium">업체명</th>
+              <th className="px-3 sm:px-6 py-3 font-medium">품목명</th>
+              <th className="px-3 sm:px-6 py-3 font-medium max-w-[150px] truncate hidden md:table-cell">비고</th>
+              <th className="px-3 sm:px-6 py-3 font-medium text-right">현재 재고</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
@@ -125,17 +126,19 @@ const DashboardTab = ({ items, transactions, inventoryStats, dashboardSort, setD
                 <td colSpan="5" className="px-6 py-8 text-center text-slate-500">등록된 품목이 없습니다.</td>
               </tr>
             ) : (
-              inventoryStats.map(item => (
-                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-4 text-slate-500">
-                    <span className="px-2 py-1 bg-slate-100 rounded-md text-xs">{item.division || '-'}</span>
-                  </td>
-                  <td className="px-6 py-4 text-slate-500">{item.category}</td>
-                  <td className="px-6 py-4 font-medium text-slate-800">{item.name}</td>
-                  <td className="px-6 py-4 text-slate-500 text-xs">{item.note || '-'}</td>
-                  <td className="px-6 py-4 text-right font-bold text-blue-600">{item.currentStock}개</td>
-                </tr>
-              ))
+              inventoryStats.map(item => {
+                return (
+                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-3 sm:px-6 py-3 text-slate-500">
+                      <span className="px-2 py-1 bg-slate-100 rounded-md text-xs">{item.division || '-'}</span>
+                    </td>
+                    <td className="px-3 sm:px-6 py-3 text-slate-500 truncate max-w-[100px] sm:max-w-[150px]" title={item.category}>{item.category}</td>
+                    <td className="px-3 sm:px-6 py-3 font-medium text-slate-800 truncate max-w-[150px] sm:max-w-[200px]" title={item.name}>{item.name}</td>
+                    <td className="px-3 sm:px-6 py-3 text-slate-500 text-xs truncate max-w-[150px] hidden md:table-cell" title={item.note}>{item.note || '-'}</td>
+                    <td className="px-3 sm:px-6 py-3 text-right font-bold text-blue-600">{item.currentStock}개</td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -213,19 +216,19 @@ const TransactionTab = ({ items, transactions, onAddTransaction, inventoryStats 
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 shadow-sm p-6 h-fit">
+      <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-6 h-fit">
         <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
           <Plus size={20} className="text-blue-600" />
           입출고 등록
         </h2>
         {error && (
           <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center gap-2">
-            <AlertCircle size={16} />{error}
+            <AlertCircle size={16} className="shrink-0"/>{error}
           </div>
         )}
         {successMsg && (
           <div className="mb-4 p-3 bg-blue-50 text-blue-600 text-sm rounded-lg flex items-center gap-2">
-            <Check size={16} />{successMsg}
+            <Check size={16} className="shrink-0"/>{successMsg}
           </div>
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -236,18 +239,18 @@ const TransactionTab = ({ items, transactions, onAddTransaction, inventoryStats 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">작업 유형</label>
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => setFormData(prev => ({ ...prev, type: 'IN' }))} className={`py-2 px-4 rounded-lg border text-sm font-medium transition-all flex items-center justify-center gap-2 ${formData.type === 'IN' ? 'bg-blue-600 border-blue-600 text-white shadow-md ring-2 ring-blue-600 ring-offset-2' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-                {formData.type === 'IN' && <Check size={16} />} 입고 (+)
+              <button type="button" onClick={() => setFormData(prev => ({ ...prev, type: 'IN' }))} className={`py-2 px-2 sm:px-4 rounded-lg border text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-2 ${formData.type === 'IN' ? 'bg-blue-600 border-blue-600 text-white shadow-md ring-2 ring-blue-600 ring-offset-1' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                {formData.type === 'IN' && <Check size={14} className="shrink-0"/>} 입고 (+)
               </button>
-              <button type="button" onClick={() => setFormData(prev => ({ ...prev, type: 'OUT' }))} className={`py-2 px-4 rounded-lg border text-sm font-medium transition-all flex items-center justify-center gap-2 ${formData.type === 'OUT' ? 'bg-red-600 border-red-600 text-white shadow-md ring-2 ring-red-600 ring-offset-2' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-                {formData.type === 'OUT' && <Check size={16} />} 출고 (-)
+              <button type="button" onClick={() => setFormData(prev => ({ ...prev, type: 'OUT' }))} className={`py-2 px-2 sm:px-4 rounded-lg border text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-2 ${formData.type === 'OUT' ? 'bg-red-600 border-red-600 text-white shadow-md ring-2 ring-red-600 ring-offset-1' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                {formData.type === 'OUT' && <Check size={14} className="shrink-0"/>} 출고 (-)
               </button>
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">품목 선택</label>
-            <select value={formData.itemId} onChange={(e) => setFormData(prev => ({ ...prev, itemId: e.target.value }))} className="w-full rounded-lg border-slate-200 border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-              <option value="">품목을 선택하세요</option>
+            <select value={formData.itemId} onChange={(e) => setFormData(prev => ({ ...prev, itemId: e.target.value }))} className="w-full rounded-lg border-slate-200 border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white truncate">
+              <option value="">품목 선택</option>
               {sortedItems.map(item => (
                 <option key={item.id} value={item.id}>({item.category || item.provider}) {item.name}</option>
               ))}
@@ -259,7 +262,7 @@ const TransactionTab = ({ items, transactions, onAddTransaction, inventoryStats 
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">비고 (선택)</label>
-            <input type="text" value={formData.note} onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))} placeholder="ex) " className="w-full rounded-lg border-slate-200 border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input type="text" value={formData.note} onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))} placeholder="추가 내용" className="w-full rounded-lg border-slate-200 border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <button type="submit" className="w-full text-white font-medium py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors flex justify-center items-center gap-2 mt-2">
             저장하기
@@ -268,9 +271,9 @@ const TransactionTab = ({ items, transactions, onAddTransaction, inventoryStats 
       </div>
 
       <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center flex-wrap gap-2">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center flex-wrap gap-2">
           <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-            <History size={20} className="text-slate-500" /> 최근 입출고 내역
+            <History size={20} className="text-slate-500" /> 최근 내역
           </h2>
           <button
             onClick={() => {
@@ -282,18 +285,19 @@ const TransactionTab = ({ items, transactions, onAddTransaction, inventoryStats 
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 hover:bg-green-200 rounded-md transition-colors"
           >
-            <Download size={16} /> <span className="hidden sm:inline">엑셀 다운로드</span>
+            <Download size={16} /> <span className="hidden sm:inline">다운로드</span>
           </button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm min-w-[500px]">
+          {/* 폭 강제 고정 제거 */}
+          <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
               <tr>
-                <th className="px-6 py-3 font-medium">일자</th>
-                <th className="px-6 py-3 font-medium">유형</th>
-                <th className="px-6 py-3 font-medium">품목명</th>
-                <th className="px-6 py-3 font-medium text-right">수량</th>
-                <th className="px-6 py-3 font-medium">비고</th>
+                <th className="px-3 sm:px-6 py-3 font-medium">일자</th>
+                <th className="px-3 sm:px-6 py-3 font-medium">유형</th>
+                <th className="px-3 sm:px-6 py-3 font-medium">품목명</th>
+                <th className="px-3 sm:px-6 py-3 font-medium text-right">수량</th>
+                <th className="px-3 sm:px-6 py-3 font-medium max-w-[100px] hidden md:table-cell">비고</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -302,17 +306,22 @@ const TransactionTab = ({ items, transactions, onAddTransaction, inventoryStats 
               ) : (
                 sortedTransactions.map(tx => {
                   const item = items.find(i => i.id === tx.itemId);
+                  // 모바일에서는 년도 생략 (예: 24-05-12 -> 05-12)
+                  const shortDate = tx.date ? tx.date.substring(5) : '';
                   return (
                     <tr key={tx.id} className="hover:bg-slate-50/50">
-                      <td className="px-6 py-4 text-slate-500">{tx.date}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${tx.type === 'IN' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
+                      <td className="px-3 sm:px-6 py-3 text-slate-500 text-xs sm:text-sm">
+                        <span className="sm:hidden">{shortDate}</span>
+                        <span className="hidden sm:inline">{tx.date}</span>
+                      </td>
+                      <td className="px-3 sm:px-6 py-3">
+                        <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium ${tx.type === 'IN' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
                           {tx.type === 'IN' ? '입고' : '출고'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 font-medium">{item ? item.name : '삭제된품목'}</td>
-                      <td className={`px-6 py-4 text-right font-semibold ${tx.type === 'IN' ? 'text-blue-600' : 'text-red-600'}`}>{tx.type === 'IN' ? '+' : '-'}{tx.quantity}</td>
-                      <td className="px-6 py-4 text-slate-500">{tx.note || '-'}</td>
+                      <td className="px-3 sm:px-6 py-3 font-medium truncate max-w-[100px] sm:max-w-[200px]" title={item ? item.name : '삭제된품목'}>{item ? item.name : '삭제된품목'}</td>
+                      <td className={`px-3 sm:px-6 py-3 text-right font-semibold ${tx.type === 'IN' ? 'text-blue-600' : 'text-red-600'}`}>{tx.type === 'IN' ? '+' : '-'}{tx.quantity}</td>
+                      <td className="px-3 sm:px-6 py-3 text-slate-500 text-xs truncate max-w-[100px] hidden md:table-cell" title={tx.note}>{tx.note || '-'}</td>
                     </tr>
                   );
                 })
@@ -376,32 +385,31 @@ const CalendarTab = ({ items, transactions }) => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+      <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-            <BarChartIcon size={20} className="text-blue-600" /> 기간별 입출고 추이
+            <BarChartIcon size={20} className="text-blue-600" /> 입출고 추이
           </h2>
           <div className="flex bg-slate-100 p-1 rounded-lg w-full sm:w-auto">
             {['day', 'week', 'month'].map(period => (
-              <button key={period} onClick={() => setChartPeriod(period)} className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium rounded-md ${chartPeriod === period ? 'bg-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+              <button key={period} onClick={() => setChartPeriod(period)} className={`flex-1 sm:flex-none px-4 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all ${chartPeriod === period ? 'bg-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                 {period === 'day' ? '일단위' : period === 'week' ? '주단위' : '월단위'}
               </button>
             ))}
           </div>
         </div>
         
-        {/* 그래프 에러 방지: 높이를 명시적으로 300px 지정 */}
         <div className="w-full" style={{ height: '300px' }}>
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                <Bar dataKey="IN" name="입고량" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
-                <Bar dataKey="OUT" name="출고량" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={20} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }} />
+                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }} />
+                <Bar dataKey="IN" name="입고량" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={16} />
+                <Bar dataKey="OUT" name="출고량" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={16} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -410,19 +418,47 @@ const CalendarTab = ({ items, transactions }) => {
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-        <h2 className="text-lg font-semibold flex items-center gap-2"><CalendarDays size={20} className="text-blue-600" /> 상세 날짜 선택</h2>
-        <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500" />
+      <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold flex items-center gap-2"><CalendarDays size={20} className="text-blue-600 shrink-0" /> 상세 날짜 선택</h2>
+        <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full sm:w-auto rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+          <div className="p-2 sm:p-3 bg-blue-100 text-blue-600 rounded-lg shrink-0">
+            <ArrowDownToLine size={20} className="sm:w-6 sm:h-6"/>
+          </div>
+          <div>
+            <p className="text-xs sm:text-sm text-slate-500 font-medium">일일 입고</p>
+            <p className="text-lg sm:text-2xl font-bold text-slate-800">{dailyStats.totalIn}개</p>
+          </div>
+        </div>
+        <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+          <div className="p-2 sm:p-3 bg-red-100 text-red-600 rounded-lg shrink-0">
+            <ArrowUpFromLine size={20} className="sm:w-6 sm:h-6"/>
+          </div>
+          <div>
+            <p className="text-xs sm:text-sm text-slate-500 font-medium">일일 출고</p>
+            <p className="text-lg sm:text-2xl font-bold text-slate-800">{dailyStats.totalOut}개</p>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/50">
-          <h2 className="text-lg font-semibold">해당 일자 입출고 상세</h2>
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-200 bg-slate-50/50">
+          <h2 className="text-base sm:text-lg font-semibold">해당 일자 입출고 상세</h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm min-w-[500px]">
+          {/* 폭 고정 제거 */}
+          <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
-              <tr><th className="px-6 py-3 font-medium">시간</th><th className="px-6 py-3 font-medium">유형</th><th className="px-6 py-3 font-medium">품목명</th><th className="px-6 py-3 font-medium text-right">수량</th><th className="px-6 py-3 font-medium">비고</th></tr>
+              <tr>
+                <th className="px-3 sm:px-6 py-3 font-medium">시간</th>
+                <th className="px-3 sm:px-6 py-3 font-medium">유형</th>
+                <th className="px-3 sm:px-6 py-3 font-medium">품목명</th>
+                <th className="px-3 sm:px-6 py-3 font-medium text-right">수량</th>
+                <th className="px-3 sm:px-6 py-3 font-medium hidden md:table-cell">비고</th>
+              </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {dailyTransactions.length === 0 ? (
@@ -433,11 +469,15 @@ const CalendarTab = ({ items, transactions }) => {
                   const timeStr = tx.createdAt ? new Date(tx.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '-';
                   return (
                     <tr key={tx.id} className="hover:bg-slate-50/50">
-                      <td className="px-6 py-4 text-slate-500">{timeStr}</td>
-                      <td className="px-6 py-4"><span className={`px-2 py-1 rounded-full text-xs font-medium ${tx.type === 'IN' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>{tx.type === 'IN' ? '입고' : '출고'}</span></td>
-                      <td className="px-6 py-4 font-medium">{item ? item.name : '알수없음'}</td>
-                      <td className={`px-6 py-4 text-right font-semibold ${tx.type === 'IN' ? 'text-blue-600' : 'text-red-600'}`}>{tx.type === 'IN' ? '+' : '-'}{tx.quantity}</td>
-                      <td className="px-6 py-4 text-slate-500">{tx.note || '-'}</td>
+                      <td className="px-3 sm:px-6 py-3 text-slate-500 text-xs sm:text-sm">{timeStr}</td>
+                      <td className="px-3 sm:px-6 py-3">
+                        <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium ${tx.type === 'IN' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
+                          {tx.type === 'IN' ? '입고' : '출고'}
+                        </span>
+                      </td>
+                      <td className="px-3 sm:px-6 py-3 font-medium truncate max-w-[120px] sm:max-w-[200px]" title={item ? item.name : '삭제된품목'}>{item ? item.name : '삭제된품목'}</td>
+                      <td className={`px-3 sm:px-6 py-3 text-right font-semibold ${tx.type === 'IN' ? 'text-blue-600' : 'text-red-600'}`}>{tx.type === 'IN' ? '+' : '-'}{tx.quantity}</td>
+                      <td className="px-3 sm:px-6 py-3 text-slate-500 text-xs hidden md:table-cell truncate max-w-[100px]" title={tx.note}>{tx.note || '-'}</td>
                     </tr>
                   );
                 })
@@ -474,68 +514,84 @@ const ItemManagementTab = ({ items, onAddItem, onUpdateItem, onDeleteItem }) => 
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 shadow-sm p-6 h-fit">
+      <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-6 h-fit">
         <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2"><Plus size={20} className="text-blue-600" /> 새 품목 등록</h2>
-        <form onSubmit={handleAdd} className="space-y-4">
-          <input type="text" value={newItem.division} onChange={e => setNewItem({...newItem, division: e.target.value})} placeholder="구분 (ex: 소모품)" className="w-full border p-2 rounded" />
-          <input type="text" value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})} placeholder="업체명" className="w-full border p-2 rounded" />
-          <input type="text" required value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} placeholder="품목명 *" className="w-full border p-2 rounded" />
-          <input type="text" value={newItem.note} onChange={e => setNewItem({...newItem, note: e.target.value})} placeholder="비고" className="w-full border p-2 rounded" />
-          <button type="submit" className="w-full bg-slate-800 text-white p-2 rounded hover:bg-slate-700">품목 추가하기</button>
+        <form onSubmit={handleAdd} className="space-y-3 sm:space-y-4">
+          <input type="text" value={newItem.division} onChange={e => setNewItem({...newItem, division: e.target.value})} placeholder="구분 (ex: 소모품)" className="w-full border p-2 rounded text-sm sm:text-base" />
+          <input type="text" value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})} placeholder="업체명" className="w-full border p-2 rounded text-sm sm:text-base" />
+          <input type="text" required value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} placeholder="품목명 (필수)" className="w-full border p-2 rounded text-sm sm:text-base" />
+          <input type="text" value={newItem.note} onChange={e => setNewItem({...newItem, note: e.target.value})} placeholder="비고" className="w-full border p-2 rounded text-sm sm:text-base" />
+          <button type="submit" className="w-full bg-slate-800 text-white p-2.5 rounded hover:bg-slate-700 text-sm sm:text-base font-medium">품목 추가하기</button>
         </form>
       </div>
 
       <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b bg-slate-50 flex justify-between items-center flex-wrap gap-2">
-          <h2 className="text-lg font-semibold flex items-center gap-2"><Settings size={20} className="text-slate-500" /> 등록된 품목 목록</h2>
-          <div className="flex items-center gap-3">
+        <div className="px-4 sm:px-6 py-4 border-b bg-slate-50 flex justify-between items-center flex-wrap gap-2">
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Settings size={20} className="text-slate-500" /> 등록 품목</h2>
+          <div className="flex items-center gap-2 sm:gap-3">
             <button onClick={() => {
               const rows = [['구분', '업체명', '품목명', '비고'], ...sortedItems.map(i => [i.division, i.category, i.name, i.note])];
               exportToExcel('품목목록', rows);
-            }} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-green-100 text-green-700 rounded"><Download size={16} /><span className="hidden sm:inline">엑셀 다운로드</span></button>
+            }} className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs sm:text-sm bg-green-100 text-green-700 rounded transition-colors"><Download size={14} /><span className="hidden sm:inline">엑셀 다운로드</span></button>
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm min-w-[600px]">
+          {/* 폭 고정 제거 */}
+          <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-slate-50 text-slate-600 border-b">
-              <tr><th className="p-3">구분</th><th className="p-3">업체명</th><th className="p-3">품목명</th><th className="p-3">비고</th><th className="p-3 text-center">관리</th></tr>
+              <tr>
+                <th className="p-3 sm:p-4 font-medium">구분</th>
+                <th className="p-3 sm:p-4 font-medium">업체명</th>
+                <th className="p-3 sm:p-4 font-medium">품목명</th>
+                <th className="p-3 sm:p-4 font-medium hidden md:table-cell">비고</th>
+                <th className="p-3 sm:p-4 font-medium text-center">관리</th>
+              </tr>
             </thead>
             <tbody className="divide-y">
-              {sortedItems.map(item => (
-                <tr key={item.id} className="hover:bg-slate-50">
-                  {editingItemId === item.id ? (
-                    <>
-                      <td className="p-2"><input className="border p-1 w-full" value={editFormData.division} onChange={e=>setEditFormData({...editFormData, division: e.target.value})}/></td>
-                      <td className="p-2"><input className="border p-1 w-full" value={editFormData.category} onChange={e=>setEditFormData({...editFormData, category: e.target.value})}/></td>
-                      <td className="p-2"><input className="border p-1 w-full" value={editFormData.name} onChange={e=>setEditFormData({...editFormData, name: e.target.value})}/></td>
-                      <td className="p-2"><input className="border p-1 w-full" value={editFormData.note} onChange={e=>setEditFormData({...editFormData, note: e.target.value})}/></td>
-                      <td className="p-2 text-center">
-                        <button onClick={() => handleSaveEdit(item.id)} className="p-1 text-blue-600 bg-blue-100 rounded mr-1"><Check size={16}/></button>
-                        <button onClick={() => setEditingItemId(null)} className="p-1 text-slate-600 bg-slate-200 rounded"><X size={16}/></button>
-                      </td>
-                    </>
-                  ) : deletingItemId === item.id ? (
-                    <>
-                      <td colSpan="4" className="p-3 text-center text-red-600 font-bold">정말 삭제하시겠습니까?</td>
-                      <td className="p-2 text-center">
-                        <button onClick={() => { onDeleteItem(item.id); setDeletingItemId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs rounded mr-1">삭제</button>
-                        <button onClick={() => setDeletingItemId(null)} className="px-2 py-1 bg-slate-200 text-xs rounded">취소</button>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="p-3"><span className="bg-slate-100 px-2 py-1 rounded text-xs">{item.division || '-'}</span></td>
-                      <td className="p-3">{item.category}</td>
-                      <td className="p-3 font-medium">{item.name}</td>
-                      <td className="p-3 text-slate-500">{item.note}</td>
-                      <td className="p-3 text-center">
-                        <button onClick={() => { setEditingItemId(item.id); setEditFormData(item); }} className="p-1 text-slate-400 hover:text-blue-600"><Pencil size={16}/></button>
-                        <button onClick={() => setDeletingItemId(item.id)} className="p-1 text-slate-400 hover:text-red-600"><Trash2 size={16}/></button>
-                      </td>
-                    </>
-                  )}
+              {sortedItems.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="p-6 text-center text-slate-500">등록된 품목이 없습니다.</td>
                 </tr>
-              ))}
+              ) : (
+                sortedItems.map(item => {
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50">
+                      {editingItemId === item.id ? (
+                        <>
+                          <td className="p-1 sm:p-2"><input className="border p-1 w-full text-xs sm:text-sm" value={editFormData.division} onChange={e=>setEditFormData({...editFormData, division: e.target.value})}/></td>
+                          <td className="p-1 sm:p-2"><input className="border p-1 w-full text-xs sm:text-sm" value={editFormData.category} onChange={e=>setEditFormData({...editFormData, category: e.target.value})}/></td>
+                          <td className="p-1 sm:p-2"><input className="border p-1 w-full text-xs sm:text-sm" value={editFormData.name} onChange={e=>setEditFormData({...editFormData, name: e.target.value})}/></td>
+                          <td className="p-1 sm:p-2 hidden md:table-cell"><input className="border p-1 w-full text-xs sm:text-sm" value={editFormData.note} onChange={e=>setEditFormData({...editFormData, note: e.target.value})}/></td>
+                          <td className="p-1 sm:p-2 text-center whitespace-nowrap">
+                            <button onClick={() => handleSaveEdit(item.id)} className="p-1 text-blue-600 bg-blue-100 rounded mr-1"><Check size={14} className="sm:w-4 sm:h-4"/></button>
+                            <button onClick={() => setEditingItemId(null)} className="p-1 text-slate-600 bg-slate-200 rounded"><X size={14} className="sm:w-4 sm:h-4"/></button>
+                          </td>
+                        </>
+                      ) : deletingItemId === item.id ? (
+                        <>
+                          <td colSpan="3" className="p-3 text-center text-red-600 font-bold text-xs sm:text-sm">삭제할까요?</td>
+                          <td className="hidden md:table-cell"></td>
+                          <td className="p-2 text-center whitespace-nowrap">
+                            <button onClick={() => { onDeleteItem(item.id); setDeletingItemId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs rounded mr-1">네</button>
+                            <button onClick={() => setDeletingItemId(null)} className="px-2 py-1 bg-slate-200 text-xs rounded">아니오</button>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="p-3 sm:p-4"><span className="bg-slate-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-xs text-slate-600">{item.division || '-'}</span></td>
+                          <td className="p-3 sm:p-4 text-slate-600 truncate max-w-[80px] sm:max-w-[120px]" title={item.category}>{item.category}</td>
+                          <td className="p-3 sm:p-4 font-medium text-slate-800 truncate max-w-[120px] sm:max-w-[200px]" title={item.name}>{item.name}</td>
+                          <td className="p-3 sm:p-4 text-slate-400 text-xs hidden md:table-cell truncate max-w-[100px]" title={item.note}>{item.note || '-'}</td>
+                          <td className="p-3 sm:p-4 text-center whitespace-nowrap">
+                            <button onClick={() => { setEditingItemId(item.id); setEditFormData(item); }} className="p-1.5 text-slate-400 hover:text-blue-600"><Pencil size={14} className="sm:w-4 sm:h-4"/></button>
+                            <button onClick={() => setDeletingItemId(item.id)} className="p-1.5 text-slate-400 hover:text-red-600"><Trash2 size={14} className="sm:w-4 sm:h-4"/></button>
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
