@@ -1,10 +1,11 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { 
   Package, ArrowDownToLine, ArrowUpFromLine, Settings, LayoutDashboard, Plus, History,
-  AlertCircle, CalendarDays, BarChart as BarChartIcon, Pencil, Check, X, Trash2, Download
+  AlertCircle, CalendarDays, BarChart as BarChartIcon, Pencil, Check, X, Trash2, Download, Upload,
+  Save, RefreshCw
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -62,7 +63,7 @@ const loadLocalData = (newKey, oldKeyPrefix, fallback) => {
       const oldCode = localStorage.getItem('inventory_sync_code') || 'DEMO123';
       val = localStorage.getItem(`${oldKeyPrefix}_${oldCode}`);
       if (val) {
-        localStorage.setItem(newKey, val); // 새 키로 데이터 복사(마이그레이션)
+        localStorage.setItem(newKey, val);
       }
     }
     return val ? JSON.parse(val) : fallback;
@@ -242,7 +243,7 @@ const TransactionTab = ({ items, transactions, onAddTransaction, inventoryStats 
     await onAddTransaction(newTx);
     
     setFormData({ itemId: '', type: 'IN', quantity: '', note: '', date: today }); 
-    setSuccessMsg('입출고 내역이 성공적으로 저장되었습니다!');
+    setSuccessMsg('입출고 내역이 저장되었습니다!');
     setTimeout(() => setSuccessMsg(''), 3000);
   };
 
@@ -497,7 +498,6 @@ const CalendarTab = ({ items, transactions, onDeleteTransaction }) => {
               ) : (
                 dailyTransactions.map((tx, index) => {
                   const item = items.find(i => i.id === tx.itemId);
-                  // 배열이 최신순(내림차순) 정렬이므로, 역순으로 번호를 부여하여 오래된 내역부터 1번으로 시작하도록 함
                   const seqNum = dailyTransactions.length - index; 
                   return (
                     <tr key={tx.id} className="hover:bg-slate-50/50">
@@ -539,12 +539,13 @@ const CalendarTab = ({ items, transactions, onDeleteTransaction }) => {
   );
 };
 
-// --- [탭 4] 품목 관리 컴포넌트 ---
-const ItemManagementTab = ({ items, onAddItem, onUpdateItem, onDeleteItem }) => {
+// --- [탭 4] 품목 관리 & 데이터 백업 컴포넌트 ---
+const ItemManagementTab = ({ items, transactions, appName, onAddItem, onUpdateItem, onDeleteItem }) => {
   const [newItem, setNewItem] = useState({ division: '', name: '', category: '', note: '' });
   const [editingItemId, setEditingItemId] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [deletingItemId, setDeletingItemId] = useState(null);
+  const fileInputRef = useRef(null);
 
   const sortedItems = useMemo(() => [...items].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko-KR')), [items]);
 
@@ -561,20 +562,108 @@ const ItemManagementTab = ({ items, onAddItem, onUpdateItem, onDeleteItem }) => 
     setEditingItemId(null); 
   };
 
+  // --- 데이터 백업 (JSON 다운로드) ---
+  const handleExportBackup = () => {
+    const backupData = {
+      appName: appName,
+      items: items,
+      transactions: transactions,
+      exportDate: new Date().toISOString()
+    };
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `재고관리_백업데이터_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // --- 데이터 복원 (JSON 업로드) ---
+  const handleImportBackup = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target.result);
+        if (imported.items && Array.isArray(imported.items) && imported.transactions && Array.isArray(imported.transactions)) {
+          if (window.confirm('🚨 경고: 현재 기기의 모든 데이터가 삭제되고, 불러온 파일의 데이터로 완전히 덮어씌워집니다.\n\n계속 진행하시겠습니까?')) {
+            localStorage.setItem('inventory_items', JSON.stringify(imported.items));
+            localStorage.setItem('inventory_txs', JSON.stringify(imported.transactions));
+            if (imported.appName) {
+              localStorage.setItem('inventory_app_name', imported.appName);
+            }
+            alert('✅ 데이터 복원이 성공적으로 완료되었습니다! 앱이 새로고침 됩니다.');
+            window.location.reload(); // 새로고침으로 데이터 완벽 갱신
+          }
+        } else {
+          alert('❌ 올바른 재고관리 백업 파일(JSON) 형식이 아닙니다.');
+        }
+      } catch (err) {
+        alert('❌ 파일을 읽는 중 오류가 발생했습니다. 올바른 파일인지 확인해주세요.');
+      }
+      e.target.value = ''; // 동일 파일 재선택 가능하게 리셋
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5 h-fit">
-        <h2 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2"><Plus size={18} className="text-blue-600" /> 새 품목 등록</h2>
-        <form onSubmit={handleAdd} className="space-y-3">
-          <input type="text" value={newItem.division} onChange={e => setNewItem({...newItem, division: e.target.value})} placeholder="구분" className="w-full border p-2 rounded text-xs" />
-          <input type="text" value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})} placeholder="업체명" className="w-full border p-2 rounded text-xs" />
-          <input type="text" required value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} placeholder="품목명 (필수)" className="w-full border p-2 rounded text-xs" />
-          <input type="text" value={newItem.note} onChange={e => setNewItem({...newItem, note: e.target.value})} placeholder="비고" className="w-full border p-2 rounded text-xs" />
-          <button type="submit" className="w-full bg-slate-800 text-white p-2 rounded hover:bg-slate-700 text-xs font-medium">품목 추가하기</button>
-        </form>
+      {/* 왼쪽: 기능 컨트롤 패널 */}
+      <div className="lg:col-span-1 flex flex-col gap-6">
+        
+        {/* 새 품목 등록 카드 */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5">
+          <h2 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2"><Plus size={18} className="text-blue-600" /> 새 품목 등록</h2>
+          <form onSubmit={handleAdd} className="space-y-3">
+            <input type="text" value={newItem.division} onChange={e => setNewItem({...newItem, division: e.target.value})} placeholder="구분" className="w-full border p-2 rounded text-xs" />
+            <input type="text" value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})} placeholder="업체명" className="w-full border p-2 rounded text-xs" />
+            <input type="text" required value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} placeholder="품목명 (필수)" className="w-full border p-2 rounded text-xs" />
+            <input type="text" value={newItem.note} onChange={e => setNewItem({...newItem, note: e.target.value})} placeholder="비고" className="w-full border p-2 rounded text-xs" />
+            <button type="submit" className="w-full bg-slate-800 text-white p-2.5 rounded hover:bg-slate-700 text-xs font-medium transition-colors">품목 추가하기</button>
+          </form>
+        </div>
+
+        {/* 데이터 백업/복원 강조 카드 */}
+        <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border border-indigo-200 shadow-sm p-4 sm:p-5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+            <RefreshCw size={80} />
+          </div>
+          <h2 className="text-sm font-bold text-indigo-900 mb-2 flex items-center gap-2 relative z-10">
+            <Save size={16} /> 데이터 백업 및 복원
+          </h2>
+          <p className="text-[11px] text-slate-600 mb-4 leading-relaxed relative z-10">
+            PC나 새 스마트폰으로 데이터를 옮기시려면 먼저 기존 기기에서 <strong>[백업 파일 저장]</strong>을 눌러 파일을 받고, 새 기기에서 <strong>[불러오기]</strong> 하세요!
+          </p>
+          <div className="flex flex-col gap-2.5 relative z-10">
+            <button 
+              onClick={handleExportBackup} 
+              className="flex items-center justify-center gap-2 w-full bg-white border border-indigo-200 text-indigo-700 py-2.5 px-2 rounded-lg hover:bg-indigo-50 hover:border-indigo-300 text-xs font-bold transition-all shadow-sm"
+            >
+              <Download size={15} /> 1. 내 기기로 백업 파일 저장
+            </button>
+            <button 
+              onClick={() => fileInputRef.current?.click()} 
+              className="flex items-center justify-center gap-2 w-full bg-indigo-600 text-white py-2.5 px-2 rounded-lg hover:bg-indigo-700 text-xs font-bold transition-all shadow-sm"
+            >
+              <Upload size={15} /> 2. 백업 파일 불러오기 (복원)
+            </button>
+            <input 
+              type="file" 
+              accept=".json" 
+              ref={fileInputRef} 
+              style={{ display: 'none' }} 
+              onChange={handleImportBackup} 
+            />
+          </div>
+        </div>
+
       </div>
 
-      <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* 오른쪽: 등록 품목 목록 카드 */}
+      <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-fit">
         <div className="px-4 py-3 border-b bg-slate-50 flex justify-between items-center flex-wrap gap-2">
           <h2 className="text-base font-semibold flex items-center gap-2"><Settings size={18} className="text-slate-500" /> 등록 품목</h2>
           <div className="flex items-center gap-2">
@@ -875,7 +964,7 @@ export default function App() {
         {activeTab === 'dashboard' && <DashboardTab items={items} transactions={transactions} inventoryStats={inventoryStats} dashboardSort={dashboardSort} setDashboardSort={setDashboardSort} />}
         {activeTab === 'transactions' && <TransactionTab items={items} transactions={transactions} onAddTransaction={handleAddTransaction} inventoryStats={inventoryStats} />}
         {activeTab === 'calendar' && <CalendarTab items={items} transactions={transactions} onDeleteTransaction={handleDeleteTransaction} />}
-        {activeTab === 'items' && <ItemManagementTab items={items} onAddItem={handleAddItem} onUpdateItem={handleUpdateItem} onDeleteItem={handleDeleteItem} />}
+        {activeTab === 'items' && <ItemManagementTab items={items} transactions={transactions} appName={appName} onAddItem={handleAddItem} onUpdateItem={handleUpdateItem} onDeleteItem={handleDeleteItem} />}
       </main>
     </div>
   );
