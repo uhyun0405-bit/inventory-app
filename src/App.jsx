@@ -5,7 +5,7 @@ import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from 'fi
 import { 
   Package, ArrowDownToLine, ArrowUpFromLine, Settings, LayoutDashboard, Plus, History,
   AlertCircle, CalendarDays, BarChart as BarChartIcon, Pencil, Check, X, Trash2, Download, Upload,
-  Save, RefreshCw
+  Save, RefreshCw, Search // 검색 아이콘 추가
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -89,96 +89,130 @@ const loadLocalString = (newKey, oldKeyPrefix, fallback) => {
 };
 
 // --- [탭 1] 재고 현황 대시보드 컴포넌트 ---
-const DashboardTab = ({ items, transactions, inventoryStats, dashboardSort, setDashboardSort }) => (
-  <div className="space-y-6">
-    <div className="grid grid-cols-1 gap-4">
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
-        <div className="p-3 bg-blue-100 text-blue-600 rounded-lg shrink-0">
-          <Package size={24} />
-        </div>
-        <div>
-          <p className="text-xs text-slate-500 font-medium">등록된 품목 수</p>
-          <p className="text-xl font-bold text-slate-800">{items.length}개</p>
-        </div>
-      </div>
-    </div>
+const DashboardTab = ({ items, transactions, inventoryStats, dashboardSort, setDashboardSort }) => {
+  // 검색어 상태 추가
+  const [searchTerm, setSearchTerm] = useState('');
 
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <h2 className="text-base font-semibold text-slate-800">현재 재고 현황</h2>
-        <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 [&::-webkit-scrollbar]:hidden">
-          <button
-            onClick={() => {
-              const rows = [
-                ['구분', '업체명', '품목명', '비고', '현재 재고(개)'],
-                ...inventoryStats.map(item => [item.division || '', item.category || '', item.name || '', item.note || '', item.currentStock])
-              ];
-              exportToExcel('현재_재고_현황', rows);
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200 rounded-md transition-colors whitespace-nowrap shrink-0"
-          >
-            <Download size={14} />
-            <span className="hidden sm:inline">엑셀 다운로드</span>
-          </button>
-          <div className="flex bg-slate-200/50 p-1 rounded-lg shrink-0">
-            <button
-              onClick={() => setDashboardSort('name')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${dashboardSort === 'name' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              가나다순
-            </button>
-            <button
-              onClick={() => setDashboardSort('category')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${dashboardSort === 'category' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              업체명순
-            </button>
-            <button
-              onClick={() => setDashboardSort('division')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${dashboardSort === 'division' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              구분순
-            </button>
+  // 검색어에 따른 필터링 로직 추가
+  const filteredStats = useMemo(() => {
+    if (!searchTerm.trim()) return inventoryStats;
+    const lowercasedTerm = searchTerm.toLowerCase();
+    return inventoryStats.filter(item => 
+      (item.name || '').toLowerCase().includes(lowercasedTerm) ||
+      (item.category || '').toLowerCase().includes(lowercasedTerm) ||
+      (item.division || '').toLowerCase().includes(lowercasedTerm)
+    );
+  }, [inventoryStats, searchTerm]);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-4">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
+          <div className="p-3 bg-blue-100 text-blue-600 rounded-lg shrink-0">
+            <Package size={24} />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-medium">등록된 품목 수</p>
+            <p className="text-xl font-bold text-slate-800">{items.length}개</p>
           </div>
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs whitespace-nowrap">
-          <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
-            <tr>
-              <th className="px-2 sm:px-4 py-2.5 font-medium">구분</th>
-              <th className="px-2 sm:px-4 py-2.5 font-medium">업체명</th>
-              <th className="px-2 sm:px-4 py-2.5 font-medium">품목명</th>
-              <th className="px-2 sm:px-4 py-2.5 font-medium max-w-[100px] truncate">비고</th>
-              <th className="px-2 sm:px-4 py-2.5 font-medium text-right">현재 재고</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
-            {inventoryStats.length === 0 ? (
+
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <h2 className="text-base font-semibold text-slate-800 shrink-0">현재 재고 현황</h2>
+          
+          {/* 검색 기능 추가 영역 */}
+          <div className="relative w-full sm:max-w-xs flex-1 order-3 sm:order-none mt-2 sm:mt-0">
+            <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+              <Search size={14} className="text-slate-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="품목명, 업체명, 구분 검색"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full rounded-md border border-slate-300 pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 [&::-webkit-scrollbar]:hidden order-2 sm:order-none">
+            <button
+              onClick={() => {
+                const rows = [
+                  ['구분', '업체명', '품목명', '비고', '현재 재고(개)'],
+                  // 필터링된 데이터(filteredStats)를 기준으로 다운로드 되도록 수정
+                  ...filteredStats.map(item => [item.division || '', item.category || '', item.name || '', item.note || '', item.currentStock])
+                ];
+                exportToExcel('현재_재고_현황', rows);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200 rounded-md transition-colors whitespace-nowrap shrink-0"
+            >
+              <Download size={14} />
+              <span className="hidden sm:inline">엑셀 다운로드</span>
+            </button>
+            <div className="flex bg-slate-200/50 p-1 rounded-lg shrink-0">
+              <button
+                onClick={() => setDashboardSort('name')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${dashboardSort === 'name' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                가나다순
+              </button>
+              <button
+                onClick={() => setDashboardSort('category')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${dashboardSort === 'category' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                업체명순
+              </button>
+              <button
+                onClick={() => setDashboardSort('division')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${dashboardSort === 'division' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                구분순
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs whitespace-nowrap">
+            <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
               <tr>
-                <td colSpan="5" className="px-4 py-6 text-center text-slate-500">등록된 품목이 없습니다.</td>
+                <th className="px-2 sm:px-4 py-2.5 font-medium">구분</th>
+                <th className="px-2 sm:px-4 py-2.5 font-medium">업체명</th>
+                <th className="px-2 sm:px-4 py-2.5 font-medium">품목명</th>
+                <th className="px-2 sm:px-4 py-2.5 font-medium max-w-[100px] truncate">비고</th>
+                <th className="px-2 sm:px-4 py-2.5 font-medium text-right">현재 재고</th>
               </tr>
-            ) : (
-              inventoryStats.map(item => {
-                return (
-                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-2 sm:px-4 py-2 text-slate-500">
-                      <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px]">{item.division || '-'}</span>
-                    </td>
-                    <td className="px-2 sm:px-4 py-2 text-slate-500 truncate max-w-[80px] sm:max-w-[120px]" title={item.category}>{item.category}</td>
-                    <td className="px-2 sm:px-4 py-2 font-medium text-slate-800 truncate max-w-[120px] sm:max-w-[200px]" title={item.name}>{item.name}</td>
-                    <td className="px-2 sm:px-4 py-2 text-slate-500 truncate max-w-[100px]" title={item.note}>{item.note || '-'}</td>
-                    <td className="px-2 sm:px-4 py-2 text-right font-bold text-blue-600 text-sm">{item.currentStock}개</td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {filteredStats.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="px-4 py-6 text-center text-slate-500">
+                    {searchTerm ? '검색 결과가 없습니다.' : '등록된 품목이 없습니다.'}
+                  </td>
+                </tr>
+              ) : (
+                filteredStats.map(item => {
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-2 sm:px-4 py-2 text-slate-500">
+                        <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px]">{item.division || '-'}</span>
+                      </td>
+                      <td className="px-2 sm:px-4 py-2 text-slate-500 truncate max-w-[80px] sm:max-w-[120px]" title={item.category}>{item.category}</td>
+                      <td className="px-2 sm:px-4 py-2 font-medium text-slate-800 truncate max-w-[120px] sm:max-w-[200px]" title={item.name}>{item.name}</td>
+                      <td className="px-2 sm:px-4 py-2 text-slate-500 truncate max-w-[100px]" title={item.note}>{item.note || '-'}</td>
+                      <td className="px-2 sm:px-4 py-2 text-right font-bold text-blue-600 text-sm">{item.currentStock}개</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // --- [탭 2] 입출고 등록 컴포넌트 ---
 const TransactionTab = ({ items, transactions, onAddTransaction, inventoryStats }) => {
